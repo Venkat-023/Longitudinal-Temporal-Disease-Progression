@@ -1,0 +1,77 @@
+# Project Progress Summary
+
+## What We Have Done So Far
+Over the course of recent sessions, we have completed the following key tasks for the "Heart Disease Temporal Analysis" project:
+
+1. **Analysis and Expansion:** Discussed professional feature expansions to modernize the application, enhance the AI capabilities, and improve the UX design (e.g., adding "Compare" features).
+2. **Dockerization & Deployment:** Created `Dockerfile` configurations for both the frontend and backend, leveraged `docker-compose` to run the stack locally, and prepared the application for deployment on Render.
+3. **Version Control:** Troubleshot and pushed the project's code to Git repositories (`git status`, commit, push).
+4. **Local Environment & Pipeline Setup:** Resolved local environment issues and ran commands to execute the real data pipeline (`src/run_real_pipeline.py`) efficiently.
+5. **Dataset Build Fixes:** Addressed bugs in the feature extraction, data fusion, and array generation steps when processing the MIMIC-III Demo and eICU Demo datasets.
+6. **Project Cleanup:** Cleaned up unused and deprecated directories/files, identified the actively used core modules, and updated the `README.md` to reflect the current state of the architecture.
+7. **Gitignore Setup:** Created a standard `.gitignore` file tailored for Python, PyTorch, Jupyter Notebooks, and specific large `.npy`/`.csv` data directories, preventing data bloat in git commits.
+8. **Pipeline Explanation:** Explored the `build_real_dataset.py` and `predict.py` codebases to clearly identify the feature schema used to train the Bidirectional LSTM, GRU, and Transformer models, and determined the exact meaning of their predictive outputs.
+
+---
+
+## Model Details
+
+### 1. Input Attributes (Features)
+The models are trained using a shared schema consisting of precisely **30 longitudinal features** per patient visit or ICU stay. The data is aligned across both MIMIC-III and eICU datasets:
+
+**Vitals (7):**
+- `heart_rate`
+- `sbp` (Systolic Blood Pressure)
+- `dbp` (Diastolic Blood Pressure)
+- `resp_rate` (Respiratory Rate)
+- `temperature`
+- `spo2` (Oxygen Saturation)
+- `glucose`
+
+**Laboratory Values (9):**
+- `creatinine`
+- `bun` (Blood Urea Nitrogen)
+- `potassium`
+- `sodium`
+- `hematocrit`
+- `hemoglobin`
+- `wbc` (White Blood Cell Count)
+- `platelets`
+- `bicarbonate`
+
+**Cardiac Specific Markers (2) (Imputed if missing):**
+- `troponin`
+- `bnp` (Brain Natriuretic Peptide)
+
+**Clinical Context & Demographics (6):**
+- `age`
+- `los_hours` (Length of Stay in Hours)
+- `icu_flag` (Binary flag)
+- `gender_male` (1 if male, 0 if female)
+- `num_diagnoses` (Total distinct diagnoses made during admission)
+- `apache_score` (Severity score)
+
+**Temporal Tracking (2):**
+- `visit_index` (Ordered index for sequence learning)
+- `days_since_admission`
+
+**Prior Existing Conditions (3) (Binary flags):**
+- `prior_mi` (Myocardial Infarction / Heart Attack)
+- `prior_hf` (Heart Failure)
+- `prior_arrhythmia`
+
+*(Note: Synthetic pipelines expand this to 58 simulated features, but the real data pipeline enforces this exact 30-feature schema.)*
+
+---
+
+### 2. Output
+The Deep Learning Model Pipeline performs **Binary Classification** for each patient sequence.
+
+The exact inference output includes:
+
+1. **Disease Score (Probability):** A Sigmoid logit float value between `0.0` and `1.0` (e.g., `0.8523` or `85.2%`). This indicates the percent confidence the model has in the patient deteriorating or succumbing to the disease based on the temporal sequence.
+2. **Predicted Class Label:** Based on a default confidence threshold (usually `0.5`). 
+   - `1` (`⚠️ DISEASE`) : Indicates high likelihood of negative health progression, heart disease mortality, or rapid deterioration.
+   - `0` (`✅ HEALTHY`) : Indicates a lower risk / healthy status for the patient.
+
+The model ultimately produces test evaluation metrics such as **Accuracy, Precision, Recall, F1 Score, and AUC-ROC**, storing visual plots of these results (ROC & Precision-Recall curves) inside the `visualizations/results/` directory.
