@@ -1,0 +1,40 @@
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyTorch
+*.pth
+*.pt
+*.ckpt
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+
+# Data
+data/mimic_demo/
+data/eicu_demo/
+data/real/
+data/processed/
+data/preprocessed/
+*.csv
+*.npy
+
+# Visualizations
+visualizations/
+
+# OS generated files
+.DS_Store
+Thumbs.db
