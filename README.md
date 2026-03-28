@@ -1,8 +1,13 @@
 # Heart Disease Temporal Analysis — Deep Learning Pipeline
 
-A longitudinal deep-learning pipeline that predicts heart disease progression
-using **Bidirectional LSTM with attention**, **GRU**, and **Transformer** models,
-trained on either **synthetic** or **real clinical data** (MIMIC-III Demo + eICU Demo).
+A longitudinal deep-learning pipeline that predicts **cardiac condition progression**
+(worsening vs. stable/improving) across ICU admissions, using **Bidirectional LSTM
+with attention**, **GRU**, and **Transformer** models.
+
+Supports three data modes:
+- 🧪 **Synthetic** — 500 patients, generated locally, no setup required
+- 🏥 **MIMIC-III Demo** — 100 ICU patients (open-access, no credentials)
+- 🏥 **MIMIC-IV 2.1** — ~300,000 ICU patients (full dataset, 67 GB, via Kaggle)
 
 ---
 
@@ -23,20 +28,44 @@ python src/models/train_transformer.py
 python src/utils/visualize_results.py
 ```
 
-### 3. Real clinical data pipeline (open-access — no credentials needed)
+### 3. Real clinical data pipeline — MIMIC-III Demo (open-access)
 ```bash
 python src/run_real_pipeline.py
 ```
-Or run individual steps:
+
+### 4. MIMIC-IV 2.1 pipeline (full 67 GB dataset — best results)
+
+#### Prerequisites
+1. Create a free account at https://www.kaggle.com
+2. Go to **https://www.kaggle.com/settings** → API section → **"Create New Token"**
+3. Save the downloaded `kaggle.json` to `C:\Users\<you>\.kaggle\kaggle.json`
+
+#### Run
 ```bash
-python src/data/download_real_data.py      # Download MIMIC-III Demo + eICU Demo
-python src/data/build_real_dataset.py      # Feature extraction + fusion + preprocessing
-python src/utils/visualize_data.py         # EDA visualizations
-python src/models/train_lstm.py            # Train LSTM model
-python src/models/train_gru.py             # Train GRU model
-python src/models/train_transformer.py     # Train Transformer model
-python src/utils/visualize_results.py      # ROC, PR, threshold sweep
+# Full pipeline (download → extract → train all models)
+python src/run_mimiciv_pipeline.py
+
+# Step-by-step (recommended for large dataset)
+python src/data/download_mimiciv.py          # Download ZIP (~7.4 GB) from Kaggle
+python src/data/explore_mimiciv.py           # Verify item IDs (< 30 sec)
+python src/data/build_mimiciv_dataset.py     # Extract cardiac features (~30–90 min)
+python src/utils/visualize_data.py
+python src/models/train_lstm.py
+python src/models/train_gru.py
+python src/models/train_transformer.py
+python src/utils/visualize_results.py
+
+# Resume after download (if build already done)
+python src/run_mimiciv_pipeline.py --skip_download --skip_build
 ```
+
+#### Disk space required
+| File | Size |
+|------|------|
+| MIMIC-IV ZIP (downloaded) | ~7.4 GB |
+| Extracted cardiac features CSV | ~100–500 MB |
+| Preprocessed .npy arrays | ~50–200 MB |
+| **Total** | **~8–9 GB** |
 
 ---
 
@@ -59,7 +88,10 @@ Temporal Analysis/
 │   ├── data/
 │   │   ├── __init__.py
 │   │   ├── download_real_data.py          # Downloads MIMIC-III Demo + eICU Demo
-│   │   └── build_real_dataset.py          # Extracts features, fuses, preprocesses
+│   │   ├── build_real_dataset.py          # Extracts features (MIMIC-III + eICU)
+│   │   ├── download_mimiciv.py            # Downloads MIMIC-IV 2.1 ZIP from Kaggle
+│   │   ├── explore_mimiciv.py             # Item ID discovery (d_items + d_labitems)
+│   │   └── build_mimiciv_dataset.py       # Full MIMIC-IV extraction pipeline
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── train_lstm.py                  # BiLSTM with attention — primary model
@@ -83,14 +115,18 @@ Temporal Analysis/
 ### Pipeline Runners
 | File | Purpose |
 |------|---------|
-| `src/run_local_pipeline.py` | Generates synthetic longitudinal EHR data (58 features × 6 visits × 500 patients), splits/scales/saves to `.npy` arrays |
-| `src/run_real_pipeline.py` | Orchestrates the full real-data pipeline: download → build → EDA → train all models → result plots |
+| `src/run_local_pipeline.py` | Generates synthetic longitudinal EHR data (58 features × 6 visits × 500 patients) |
+| `src/run_real_pipeline.py` | MIMIC-III Demo + eICU Demo pipeline (open-access) |
+| `src/run_mimiciv_pipeline.py` | **MIMIC-IV 2.1 full pipeline** — download → explore → extract → train |
 
 ### Data Scripts
 | File | Purpose |
 |------|---------|
-| `src/data/download_real_data.py` | Auto-downloads MIMIC-III Demo (100 ICU patients) and eICU Demo (~2,500 unit stays) from PhysioNet — no credentials required |
-| `src/data/build_real_dataset.py` | Extracts cardiac cohorts from both databases, aggregates vitals + labs per ICU stay, fuses into 30 shared features, builds sliding-window sequences, and saves preprocessed `.npy` arrays |
+| `src/data/download_real_data.py` | Downloads MIMIC-III Demo + eICU Demo from PhysioNet (no credentials) |
+| `src/data/build_real_dataset.py` | Extracts cardiac features from MIMIC-III + eICU, fuses to 30 features |
+| `src/data/download_mimiciv.py` | Downloads MIMIC-IV 2.1 ZIP from Kaggle (~7.4 GB) via Kaggle API |
+| `src/data/explore_mimiciv.py` | Reads `d_items` + `d_labitems` from within ZIP to confirm itemid mappings |
+| `src/data/build_mimiciv_dataset.py` | Streams `chartevents` + `labevents` in chunks from ZIP, builds 58-feature cardiac progression dataset |
 
 ### Model Training
 | File | Purpose |
@@ -118,15 +154,38 @@ Temporal Analysis/
 
 ---
 
-## Expected Performance (Synthetic Data)
+## Prediction Target — Cardiac Progression
 
-| Metric    | Expected Range |
-|-----------|---------------|
-| Accuracy  | 0.85 – 0.92   |
-| Precision | 0.83 – 0.90   |
-| Recall    | 0.84 – 0.91   |
-| F1        | 0.84 – 0.90   |
-| AUC-ROC   | 0.90 – 0.95   |
+For the MIMIC-IV pipeline, the model predicts whether a patient's cardiac
+condition will **worsen (label=1)** or **improve / stay stable (label=0)** by
+their next ICU admission.
+
+This is determined by a **Cardiac Severity Index (CSI)** computed per ICU stay
+from these components:
+
+| Component | Normal Range | Weight |
+|-----------|-------------|--------|
+| Heart rate deviation | 60–100 bpm | up to +3 pts |
+| Systolic BP (hypotension/hypertension) | 90–160 mmHg | up to +3 pts |
+| Troponin T (myocardial injury) | < 0.01 ng/mL | up to +3 pts |
+| BNP (heart failure severity) | < 100 pg/mL | up to +3 pts |
+| SpO2 (oxygenation) | > 95% | up to +3 pts |
+| Creatinine (cardiorenal) | < 1.5 mg/dL | up to +2 pts |
+| Respiratory rate | 12–20 br/min | up to +2 pts |
+| Hemoglobin (cardiac load) | > 12 g/dL | up to +2 pts |
+
+If CSI increases > 10% from visit t to visit t+1 → **label = 1 (worsening)**.
+For single-visit patients or last visit → hospital in-hospital mortality is used.
+
+---
+
+## Expected Performance
+
+| Dataset | AUC-ROC | Notes |
+|---------|---------|-------|
+| Synthetic (500 pts) | 0.90–0.95 | Controlled noise, clean signal |
+| MIMIC-III Demo (~100 ICU) | 0.65–0.75 | Very small sample |
+| **MIMIC-IV Full (~300K visits)** | **0.75–0.85** | Best real-world performance |
 
 ---
 

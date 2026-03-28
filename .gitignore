@@ -29,6 +29,7 @@ data/eicu_demo/
 data/real/
 data/processed/
 data/preprocessed/
+data/mimic_iv_raw/
 *.csv
 *.npy
 
