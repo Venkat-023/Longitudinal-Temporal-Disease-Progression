@@ -128,7 +128,7 @@ def get_probabilities(model_path: Path, X_test: np.ndarray) -> np.ndarray:
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     input_size = X_test.shape[2]
-    ckpt = torch.load(model_path, map_location=device)
+    ckpt = torch.load(model_path, map_location=device, weights_only=False)
 
     if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
         hidden = ckpt.get("hidden_size", 128)

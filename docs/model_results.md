@@ -24,6 +24,18 @@ The existing arrays were sanitized by replacing non-finite feature values with
 zero before restarting training. After that repair, the LSTM/BiLSTM attention
 model trained normally.
 
+## Model Comparison
+
+| Model | Accuracy | Precision | Recall | F1 Score | AUC-ROC |
+|---|---:|---:|---:|---:|---:|
+| BiLSTM Attention | 0.8134 | 0.4712 | 0.8304 | 0.6012 | 0.9021 |
+| BiGRU | 0.8132 | 0.4712 | 0.8404 | 0.6038 | 0.9076 |
+| Transformer Encoder Classifier | 0.8198 | 0.4814 | 0.8237 | 0.6077 | 0.9096 |
+
+The Transformer Encoder Classifier has the best AUC-ROC, F1 score, precision,
+and accuracy in this run. The BiGRU has the highest recall, so it catches the
+largest fraction of worsening cases at the default threshold.
+
 ## BiLSTM Attention Result
 
 Training command used in Colab:
@@ -71,6 +83,77 @@ visualizations/lstm/training_history.png
 visualizations/lstm/confusion_matrix.png
 ```
 
+## BiGRU Result
+
+Training summary:
+
+| Setting | Value |
+|---|---:|
+| Parameters | 458,113 |
+| Epochs requested | 80 |
+| Early stopping epoch | 21 |
+| Best epoch | 9 |
+| Best validation loss | 0.6488 |
+| Learning rate | 0.0003 |
+| Batch size | 128 |
+| Hidden size | 128 |
+| Patience | 12 |
+
+Test metrics:
+
+| Metric | Value |
+|---|---:|
+| Accuracy | 0.8132 |
+| Precision | 0.4712 |
+| Recall | 0.8404 |
+| F1 score | 0.6038 |
+| AUC-ROC | 0.9076 |
+
+Generated output:
+
+```text
+models/gru_final.pth
+```
+
+## Transformer Encoder Classifier Result
+
+This is a Transformer encoder classifier, not a decoder-only Transformer and
+not a language model. It projects each 59-feature timestep into a `d_model=128`
+embedding, prepends a learnable classification token, adds positional encoding,
+then applies a 3-layer multi-head self-attention encoder.
+
+Training summary:
+
+| Setting | Value |
+|---|---:|
+| Parameters | 610,945 |
+| Epochs requested | 80 |
+| Early stopping epoch | 20 |
+| Best epoch | 8 |
+| Best validation loss | 0.6385 |
+| Learning rate | 0.0003 |
+| Batch size | 128 |
+| d_model | 128 |
+| Attention heads | 8 |
+| Encoder layers | 3 |
+| Patience | 12 |
+
+Test metrics:
+
+| Metric | Value |
+|---|---:|
+| Accuracy | 0.8198 |
+| Precision | 0.4814 |
+| Recall | 0.8237 |
+| F1 score | 0.6077 |
+| AUC-ROC | 0.9096 |
+
+Generated output:
+
+```text
+models/transformer_final.pth
+```
+
 ## Why These Results Improved
 
 The first run was not valid because `NaN` feature values caused `NaN` losses.
@@ -88,7 +171,7 @@ clinical task.
 
 ## Methods That Produced The Result
 
-The result came from these methods:
+The results came from these methods:
 
 - A cardiac MIMIC-IV cohort selected from diagnosis codes.
 - ICU/admission timelines converted into fixed-length sequences of 6 visits.
@@ -99,6 +182,9 @@ The result came from these methods:
 - Feature imputation, standardization, and post-scaling finite-value
   sanitization.
 - A 2-layer bidirectional LSTM encoder with attention pooling over timesteps.
+- A 2-layer bidirectional GRU recurrent baseline.
+- A Transformer Encoder Classifier with a CLS token, sinusoidal positional
+  encoding, and multi-head self-attention over patient visits.
 - Weighted `BCEWithLogitsLoss` to handle the 16.9% positive-class imbalance.
 - AdamW optimization, dropout, gradient clipping, validation-loss checkpointing,
   and early stopping.

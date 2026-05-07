@@ -99,7 +99,10 @@ python evaluate_trained_models.py
 ```
 
 `train_bilstm_attention.py` is the BiLSTM model: it uses a 2-layer bidirectional
-LSTM with an attention pooling head.
+LSTM with an attention pooling head. `train_transformer_encoder.py` trains a
+Transformer Encoder Classifier: it is an encoder-only Transformer with a CLS
+classification token, sinusoidal positional encoding, 8-head self-attention,
+and 3 encoder layers.
 
 ## Train on Google Colab GPU
 
@@ -118,8 +121,9 @@ Recommended Colab flow:
 5. Run the notebook top to bottom.
 
 The notebook installs dependencies, mounts Drive, verifies GPU availability,
-rebuilds the complete dataset from `mimic-iv-2-1.zip`, trains BiLSTM, GRU, and
-Transformer, then compares metrics with `evaluate_trained_models.py`.
+rebuilds the complete dataset from `mimic-iv-2-1.zip`, trains BiLSTM attention,
+BiGRU, and the Transformer Encoder Classifier, then compares metrics with
+`evaluate_trained_models.py`.
 
 The notebook calls this strict full-run command:
 
@@ -160,22 +164,47 @@ before choosing the final model for reporting.
 
 ## Latest Recorded Result
 
-The latest full Colab run for the BiLSTM attention model is recorded in:
+The latest full Colab run trained all three models on the full MIMIC-IV
+cardiac progression dataset. The held-out test set had 5,289 samples:
+896 worsening cases and 4,393 stable/improving cases.
 
 ```text
 docs/model_results.md
 results.json
 ```
 
-Summary:
+Final model comparison on the MIMIC-IV test set:
 
-```text
-Accuracy  : 0.8134
-Precision : 0.4712
-Recall    : 0.8304
-F1 Score  : 0.6012
-AUC-ROC   : 0.9021
-```
+| Model | Accuracy | Precision | Recall | F1 Score | AUC-ROC |
+|---|---:|---:|---:|---:|---:|
+| BiLSTM Attention | 0.8134 | 0.4712 | 0.8304 | 0.6012 | 0.9021 |
+| BiGRU | 0.8132 | 0.4712 | 0.8404 | 0.6038 | 0.9076 |
+| Transformer Encoder Classifier | 0.8198 | 0.4814 | 0.8237 | 0.6077 | 0.9096 |
+
+Best AUC-ROC and F1 score came from the Transformer Encoder Classifier. Best
+recall came from BiGRU, which caught the largest fraction of worsening cases.
+
+Precision is lower than recall because the dataset is imbalanced: only about
+16.9% of samples are worsening cases. With weighted loss, the models are
+encouraged to detect the minority worsening class, so they identify many true
+worsening cases but also produce more false positives. This improves recall and
+AUC-ROC, but it reduces precision at the default `0.5` threshold.
+
+## Next Improvements
+
+Planned work to improve results:
+
+- Tune the classification threshold using validation precision-recall curves
+  instead of always using `0.5`.
+- Try focal loss or balanced sampling to reduce false positives while keeping
+  strong recall on worsening cases.
+- Calibrate predicted probabilities with Platt scaling or isotonic regression.
+- Add richer temporal features such as lab/vital slopes, recent deltas, and
+  missingness indicators.
+- Run hyperparameter search for hidden size, dropout, learning rate, number of
+  recurrent layers, Transformer encoder layers, and attention heads.
+- Compare model performance across clinically meaningful subgroups and tune for
+  the preferred clinical tradeoff between recall and precision.
 
 ## Expected Workflow for Final Results
 
