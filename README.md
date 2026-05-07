@@ -147,10 +147,17 @@ Planned work to improve results:
 
 ## Quick Colab Workflow
 
-Use the notebook:
+Use this notebook for the full raw MIMIC-IV rebuild:
 
 ```text
 notebooks/mimiciv_colab_gpu_training.ipynb
+```
+
+Use this notebook when you already have the extracted feature ZIP and only want
+to train models:
+
+```text
+notebooks/mimiciv_colab_train_from_extracted_features.ipynb
 ```
 
 Recommended Colab flow:
@@ -167,17 +174,86 @@ Full Colab command:
 python src/run_full_colab_training.py --zip data/mimic_iv_raw/mimic-iv-2-1.zip --chunk 100000 --seq_len 6 --epochs 80 --lr 0.0003 --batch_size 128 --hidden_size 128 --patience 12
 ```
 
+For future runs, prefer
+`notebooks/mimiciv_colab_train_from_extracted_features.ipynb` after uploading
+`mimiciv_extracted_features_seq6.zip`. This skips the raw 10GB preprocessing
+step and trains directly from `data/preprocessed/*.npy`.
+
 ## Reuse Extracted Features
 
 After preprocessing once, package the extracted features so future Colab runs do
-not need to rebuild from the raw MIMIC-IV ZIP:
+not need to rebuild from the raw MIMIC-IV ZIP.
 
-```bash
-zip -r mimiciv_extracted_features_seq6.zip data/preprocessed data/real/mimiciv_longitudinal_features.csv
+Run this in Colab after preprocessing is complete:
+
+```python
+from pathlib import Path
+import shutil
+import zipfile
+
+PROJECT_DIR = Path("/content/drive/MyDrive/Temporal Analysis")
+feature_zip = PROJECT_DIR / "mimiciv_extracted_features_seq6.zip"
+
+if feature_zip.exists():
+    feature_zip.unlink()
+
+shutil.make_archive(
+    base_name=str(feature_zip.with_suffix("")),
+    format="zip",
+    root_dir=PROJECT_DIR,
+    base_dir="data/preprocessed",
+)
+
+csv_path = PROJECT_DIR / "data/real/mimiciv_longitudinal_features.csv"
+with zipfile.ZipFile(feature_zip, "a", compression=zipfile.ZIP_DEFLATED) as zf:
+    if csv_path.exists():
+        zf.write(csv_path, arcname="data/real/mimiciv_longitudinal_features.csv")
+
+print("Created:", feature_zip)
 ```
 
-On the next Colab run, upload and unzip that file into the project folder before
-training.
+Download the feature package from Colab:
+
+```python
+from google.colab import files
+
+files.download("/content/drive/MyDrive/Temporal Analysis/mimiciv_extracted_features_seq6.zip")
+```
+
+Next time, upload and restore the feature package:
+
+```python
+from google.colab import files
+from pathlib import Path
+import zipfile
+
+PROJECT_DIR = Path("/content/drive/MyDrive/Temporal Analysis")
+
+uploaded = files.upload()
+zip_name = next(iter(uploaded))
+
+with zipfile.ZipFile(zip_name, "r") as zf:
+    zf.extractall(PROJECT_DIR)
+
+print("Restored extracted features to:", PROJECT_DIR)
+print("Ready to train using data/preprocessed/*.npy")
+```
+
+Then train directly without the raw 10GB preprocessing step:
+
+```bash
+python src/model_training/train_bilstm_attention.py --epochs 80 --lr 0.0003 --batch_size 128 --hidden_size 128 --patience 12
+python src/model_training/train_bigru.py --epochs 80 --lr 0.0003 --batch_size 128 --hidden_size 128 --patience 12
+python src/model_training/train_transformer_encoder.py --epochs 80 --lr 0.0003 --batch_size 128 --patience 12
+```
+
+If using the older Colab layout, use:
+
+```bash
+python src/models/train_lstm.py --epochs 80 --lr 0.0003 --batch_size 128 --hidden_size 128 --patience 12
+python src/models/train_gru.py --epochs 80 --lr 0.0003 --batch_size 128 --hidden_size 128 --patience 12
+python src/models/train_transformer.py --epochs 80 --lr 0.0003 --batch_size 128 --patience 12
+```
 
 ## Local Setup
 
