@@ -1,12 +1,12 @@
 """
-train_lstm.py
-=============
+train_bilstm_attention.py
+=========================
 Trains a Bidirectional LSTM with self-attention for heart disease prediction.
 Works with both synthetic and MIMIC-III preprocessed data.
 
 Usage
 -----
-python src/models/train_lstm.py [--epochs 50] [--lr 0.001] [--batch_size 32]
+python src/model_training/train_bilstm_attention.py [--epochs 50] [--lr 0.001] [--batch_size 32]
 """
 
 import argparse
@@ -87,7 +87,7 @@ def load_data(data_dir: Path) -> dict:
     if missing:
         print(f"❌ Missing files: {missing}")
         print("   Run: python src/run_local_pipeline.py   (synthetic)")
-        print("   OR:  python src/data/preprocess.py      (MIMIC-III)")
+        print("   OR:  python src/preprocessing/build_cardiac_progression_dataset.py")
         sys.exit(1)
 
     return {

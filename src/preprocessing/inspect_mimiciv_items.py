@@ -1,14 +1,14 @@
 """
-explore_mimiciv.py
+inspect_mimiciv_items.py
 ==================
 Fast discovery script — runs in < 30 seconds.
 Reads only the tiny dictionary files (d_items.csv, d_labitems.csv) from inside
 the ZIP to confirm which itemid values map to our 58 target features.
-Run this BEFORE build_mimiciv_dataset.py.
+Run this BEFORE build_cardiac_progression_dataset.py.
 
 Usage
 -----
-python src/data/explore_mimiciv.py [--zip data/mimic_iv_raw/mimic-iv-2-1.zip]
+python src/preprocessing/inspect_mimiciv_items.py [--zip data/mimic_iv_raw/mimic-iv-2-1.zip]
 """
 
 from __future__ import annotations
@@ -87,7 +87,7 @@ def explore(zip_path: Path):
 
     if not zip_path.exists():
         print(f"\n❌  ZIP not found: {zip_path}")
-        print("    Run: python src/data/download_mimiciv.py")
+        print("    Run: python src/preprocessing/download_mimiciv_dataset.py")
         sys.exit(1)
 
     with zipfile.ZipFile(zip_path, "r") as zf:
@@ -145,7 +145,7 @@ def explore(zip_path: Path):
     print(f"\n{'='*65}")
     print("  ✅ Exploration complete!")
     print("  Next step:")
-    print("  python src/data/build_mimiciv_dataset.py")
+    print("  python src/preprocessing/build_cardiac_progression_dataset.py")
     print(f"{'='*65}\n")
 
 

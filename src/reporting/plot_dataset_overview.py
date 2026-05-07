@@ -1,11 +1,11 @@
 """
-visualize_data.py
-=================
+plot_dataset_overview.py
+========================
 Exploratory Data Analysis (EDA) plots for the synthetic / MIMIC-III dataset.
 
 Usage
 -----
-python src/utils/visualize_data.py
+python src/reporting/plot_dataset_overview.py
 """
 
 from pathlib import Path

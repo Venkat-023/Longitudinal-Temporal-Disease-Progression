@@ -1,6 +1,6 @@
 """
-run_mimiciv_pipeline.py
-=======================
+run_full_local_pipeline.py
+==========================
 End-to-end MIMIC-IV 2.1 pipeline orchestrator.
 
 Steps
@@ -15,21 +15,21 @@ Steps
 Usage
 -----
   # Full run (first-time setup)
-  python src/run_mimiciv_pipeline.py
+  python src/run_full_local_pipeline.py
 
   # Skip download (ZIP already present)
-  python src/run_mimiciv_pipeline.py --skip_download
+  python src/run_full_local_pipeline.py --skip_download
 
   # Skip download + build (preprocessed .npy arrays already present)
-  python src/run_mimiciv_pipeline.py --skip_download --skip_build
+  python src/run_full_local_pipeline.py --skip_download --skip_build
 
   # Train only specific models
-  python src/run_mimiciv_pipeline.py --skip_download --skip_build --models lstm gru
+  python src/run_full_local_pipeline.py --skip_download --skip_build --models bilstm_attention bigru
 
 Prerequisites
 -------------
   1. pip install kaggle
-  2. Set up Kaggle API key (see download_mimiciv.py instructions)
+  2. Set up Kaggle API key (see download_mimiciv_dataset.py instructions)
 """
 
 from __future__ import annotations
@@ -66,8 +66,8 @@ def main():
     parser.add_argument("--skip_explore", action="store_true", default=True,
                         help="Skip item ID exploration (default: skip for speed)")
     parser.add_argument("--models", nargs="+",
-                        choices=["lstm", "gru", "transformer"],
-                        default=["lstm", "gru", "transformer"],
+                        choices=["bilstm_attention", "bigru", "transformer_encoder"],
+                        default=["bilstm_attention", "bigru", "transformer_encoder"],
                         help="Models to train (default: all three)")
     parser.add_argument("--chunk", type=int, default=100_000,
                         help="CSV chunk size for large files (default: 100,000)")
@@ -85,7 +85,7 @@ def main():
     # ── Step 1: Download ───────────────────────────────────────────────────────
     if not args.skip_download:
         run(
-            ["src/data/download_mimiciv.py"],
+            ["src/preprocessing/download_mimiciv_dataset.py"],
             f"Step {step}: Download MIMIC-IV 2.1 from Kaggle (~7.4 GB)"
         )
     else:
@@ -95,7 +95,7 @@ def main():
     # ── Step 2: Explore (optional) ────────────────────────────────────────────
     if not args.skip_explore:
         run(
-            ["src/data/explore_mimiciv.py"],
+            ["src/preprocessing/inspect_mimiciv_items.py"],
             f"Step {step}: Explore item IDs (d_items + d_labitems)"
         )
     else:
@@ -105,7 +105,7 @@ def main():
     # ── Step 3: Build dataset ─────────────────────────────────────────────────
     if not args.skip_build:
         run(
-            ["src/data/build_mimiciv_dataset.py",
+            ["src/preprocessing/build_cardiac_progression_dataset.py",
              "--chunk", str(args.chunk),
              "--seq_len", str(args.seq_len)],
             f"Step {step}: Extract cardiac features & build sequences (~30-90 min)"
@@ -116,16 +116,16 @@ def main():
 
     # ── Step 4: EDA ───────────────────────────────────────────────────────────
     run(
-        ["src/utils/visualize_data.py"],
+        ["src/reporting/plot_dataset_overview.py"],
         f"Step {step}: EDA visualisations"
     )
     step += 1
 
     # ── Step 5: Train models ──────────────────────────────────────────────────
     model_scripts = {
-        "lstm":        "src/models/train_lstm.py",
-        "gru":         "src/models/train_gru.py",
-        "transformer": "src/models/train_transformer.py",
+        "bilstm_attention": "src/model_training/train_bilstm_attention.py",
+        "bigru":            "src/model_training/train_bigru.py",
+        "transformer_encoder": "src/model_training/train_transformer_encoder.py",
     }
     for model in args.models:
         run(
@@ -136,7 +136,7 @@ def main():
 
     # ── Step 6: Result visualisations ────────────────────────────────────────
     run(
-        ["src/utils/visualize_results.py"],
+        ["src/reporting/plot_model_results.py"],
         f"Step {step}: Result plots (ROC, PR, threshold sweep)"
     )
 

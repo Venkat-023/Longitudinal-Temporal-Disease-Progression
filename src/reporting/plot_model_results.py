@@ -1,11 +1,11 @@
 """
-visualize_results.py
-====================
+plot_model_results.py
+=====================
 Post-training result visualisations: ROC curve, PR curve, feature importance.
 
 Usage
 -----
-python src/utils/visualize_results.py [--model_path models/lstm_final.pth]
+python src/reporting/plot_model_results.py [--model_path models/lstm_final.pth]
 """
 
 import argparse
@@ -123,8 +123,8 @@ def plot_threshold_sweep(labels, probs, out_dir: Path):
 
 def get_probabilities(model_path: Path, X_test: np.ndarray) -> np.ndarray:
     """Load model and run inference on the test set."""
-    sys.path.insert(0, str(ROOT / "src" / "models"))
-    from train_lstm import LSTMHeartDiseaseModel
+    sys.path.insert(0, str(ROOT / "src" / "model_training"))
+    from train_bilstm_attention import LSTMHeartDiseaseModel
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     input_size = X_test.shape[2]
@@ -160,7 +160,7 @@ def main():
     for fname in ["X_test.npy", "y_test.npy"]:
         if not (DATA_DIR / fname).exists():
             print(f"❌ Missing: {DATA_DIR / fname}")
-            print("   Run: python src/run_local_pipeline.py first.")
+            print("   Run: python src/preprocessing/build_cardiac_progression_dataset.py first.")
             return
 
     X_test = np.load(DATA_DIR / "X_test.npy")
@@ -169,7 +169,7 @@ def main():
     model_path = Path(args.model_path)
     if not model_path.exists():
         print(f"❌ Model not found: {model_path}")
-        print("   Run: python src/models/train_lstm.py first.")
+        print("   Run: python src/model_training/train_bilstm_attention.py first.")
         return
 
     print(f"\n📂 Loading model from {model_path.name}...")

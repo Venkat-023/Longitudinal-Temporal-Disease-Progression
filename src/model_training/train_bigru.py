@@ -1,12 +1,12 @@
 """
-train_gru.py
-============
-GRU baseline model for heart disease prediction.
+train_bigru.py
+==============
+Bidirectional GRU baseline model for heart disease prediction.
 Mirrors the LSTM training script but uses a GRU encoder.
 
 Usage
 -----
-python src/models/train_gru.py [--epochs 50] [--lr 0.001]
+python src/model_training/train_bigru.py [--epochs 50] [--lr 0.001]
 """
 
 import argparse
@@ -106,6 +106,8 @@ def main():
     parser.add_argument("--lr",         type=float, default=1e-3)
     parser.add_argument("--batch_size", type=int,   default=32)
     parser.add_argument("--hidden_size",type=int,   default=128)
+    parser.add_argument("--num_layers", type=int,   default=2)
+    parser.add_argument("--dropout",    type=float, default=0.3)
     parser.add_argument("--patience",   type=int,   default=10)
     args = parser.parse_args()
 
@@ -121,7 +123,12 @@ def main():
     test_loader  = make_loader(data["X_test"],  data["y_test"],  args.batch_size, shuffle=False)
 
     input_size = data["X_train"].shape[2]
-    model = GRUHeartDiseaseModel(input_size, args.hidden_size).to(device)
+    model = GRUHeartDiseaseModel(
+        input_size=input_size,
+        hidden_size=args.hidden_size,
+        num_layers=args.num_layers,
+        dropout=args.dropout,
+    ).to(device)
     print(f"\n🧠 GRU Model: {sum(p.numel() for p in model.parameters()):,} parameters")
 
     pos_weight = torch.tensor(
@@ -172,8 +179,13 @@ def main():
     except Exception:
         pass
 
-    torch.save({"model_state_dict": model.state_dict(), "input_size": input_size},
-               MODEL_DIR / "gru_final.pth")
+    torch.save({
+        "model_state_dict": model.state_dict(),
+        "input_size": input_size,
+        "hidden_size": args.hidden_size,
+        "num_layers": args.num_layers,
+        "dropout": args.dropout,
+    }, MODEL_DIR / "gru_final.pth")
     print(f"\n💾 Model saved to: {MODEL_DIR / 'gru_final.pth'}")
     print("\n✅ GRU training complete!")
 

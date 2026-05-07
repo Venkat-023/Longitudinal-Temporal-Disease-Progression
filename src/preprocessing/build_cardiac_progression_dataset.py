@@ -1,6 +1,6 @@
 """
-build_mimiciv_dataset.py
-========================
+build_cardiac_progression_dataset.py
+====================================
 Extracts cardiac features from the MIMIC-IV 2.1 dataset (67 GB ZIP) and
 produces .npy arrays ready for model training — without ever writing the full
 67 GB to disk.
@@ -15,10 +15,10 @@ This is determined by a Cardiac Severity Index (CSI) computed from vitals
 and lab values at each ICU stay.  For single-visit patients (or the final
 visit), hospital in-hospital mortality is used as the label.
 
-Feature schema (58 features — identical to run_local_pipeline.py)
+Feature schema (59 features)
 ------------------------------------------------------------------
-The same 58-feature vector is produced so that all three existing model files
-(train_lstm.py, train_gru.py, train_transformer.py) work without any changes.
+The same 59-feature vector is produced so that all three model training files
+work without any changes.
 
 Pipeline
 --------
@@ -37,7 +37,7 @@ Step 9 — Sliding-window sequences → save .npy to data/preprocessed/.
 
 Usage
 -----
-python src/data/build_mimiciv_dataset.py [--zip data/mimic_iv_raw/mimic-iv-2-1.zip]
+python src/preprocessing/build_cardiac_progression_dataset.py [--zip data/mimic_iv_raw/mimic-iv-2-1.zip]
                                          [--chunk 100000]
                                          [--seq_len 6]
 """
@@ -65,7 +65,7 @@ PREP_DIR = ROOT / "data" / "preprocessed"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Feature schema — MUST MATCH run_local_pipeline.py exactly (58 features)
+# Feature schema (59 features)
 # ══════════════════════════════════════════════════════════════════════════════
 
 FEATURE_NAMES = [
@@ -107,7 +107,7 @@ FEATURE_NAMES = [
     # Temporal
     "time_delta_days", "visit_index",
 ]
-NUM_FEATURES = len(FEATURE_NAMES)   # 58
+NUM_FEATURES = len(FEATURE_NAMES)   # 59
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -193,7 +193,7 @@ def _open_df(zf: zipfile.ZipFile, pattern: str,
     """Read an entire small CSV from inside the ZIP."""
     path = _find_in_zip(zf, pattern)
     if path is None:
-        raise FileNotFoundError(f"'{pattern}' not found in ZIP. Run explore_mimiciv.py to debug.")
+        raise FileNotFoundError(f"'{pattern}' not found in ZIP. Run inspect_mimiciv_items.py to debug.")
     print(f"   Reading {path!r} …", end=" ", flush=True)
     with zf.open(path) as raw:
         df = pd.read_csv(
@@ -428,7 +428,7 @@ def load_cohort(zf: zipfile.ZipFile) -> tuple[set, set, set, pd.DataFrame, pd.Da
     # Hospital expire flag (label seed for single-visit patients)
     icu["hospital_expire_flag"] = icu["hospital_expire_flag"].fillna(0).astype(int)
 
-    return cardiac_subject_ids, cardiac_hadms, cardiac_stay_ids, icu, diag_count
+    return cardiac_subjects, cardiac_hadms, cardiac_stay_ids, icu, diag_count
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -502,7 +502,7 @@ def extract_vitals(zf: zipfile.ZipFile, cardiac_stay_ids: set,
     print(f"   Rows kept  : {rows_kept:,} ({rows_kept/max(rows_read,1)*100:.1f}%)")
 
     if not agg_parts:
-        print("   ⚠️  No vital rows matched — check item IDs with explore_mimiciv.py")
+        print("   ⚠️  No vital rows matched — check item IDs with inspect_mimiciv_items.py")
         return pd.DataFrame(columns=["stay_id"])
 
     all_vitals = pd.concat(agg_parts, ignore_index=True)
@@ -717,7 +717,7 @@ def build_and_save(df: pd.DataFrame, seq_len: int = 6):
     """
     print(f"\n── Step 8-9: Sequences (seq_len={seq_len}), scaling, saving ──")
 
-    # ── Ensure all 58 feature columns exist ───────────────────────────────────
+    # ── Ensure all 59 feature columns exist ───────────────────────────────────
     for feat in FEATURE_NAMES:
         if feat not in df.columns:
             df[feat] = np.nan
@@ -829,7 +829,7 @@ def main():
 
     if not args.zip.exists():
         print(f"\n❌  ZIP not found: {args.zip}")
-        print("    Run: python src/data/download_mimiciv.py")
+        print("    Run: python src/preprocessing/download_mimiciv_dataset.py")
         sys.exit(1)
 
     print("\n" + "=" * 65)
@@ -861,9 +861,9 @@ def main():
     print(f"\n{'='*65}")
     print(f"  ✅  Dataset build complete in {elapsed:.1f} min")
     print(f"  Next steps:")
-    print(f"    python src/models/train_lstm.py")
-    print(f"    python src/models/train_gru.py")
-    print(f"    python src/models/train_transformer.py")
+    print(f"    python src/model_training/train_bilstm_attention.py")
+    print(f"    python src/model_training/train_bigru.py")
+    print(f"    python src/model_training/train_transformer_encoder.py")
     print(f"{'='*65}\n")
 
 

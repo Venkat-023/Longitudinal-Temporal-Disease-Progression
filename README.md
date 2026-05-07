@@ -1,202 +1,169 @@
-# Heart Disease Temporal Analysis — Deep Learning Pipeline
+# Heart Disease Temporal Analysis
 
-A longitudinal deep-learning pipeline that predicts **cardiac condition progression**
-(worsening vs. stable/improving) across ICU admissions, using **Bidirectional LSTM
-with attention**, **GRU**, and **Transformer** models.
+Longitudinal deep-learning pipeline for predicting cardiac condition progression
+from ICU admissions in MIMIC-IV. The project builds patient visit sequences and
+trains sequence models for binary classification:
 
-Supports three data modes:
-- 🧪 **Synthetic** — 500 patients, generated locally, no setup required
-- 🏥 **MIMIC-III Demo** — 100 ICU patients (open-access, no credentials)
-- 🏥 **MIMIC-IV 2.1** — ~300,000 ICU patients (full dataset, 67 GB, via Kaggle)
+- `1`: worsening cardiac progression
+- `0`: stable or improving progression
 
----
+The main real-data path uses the downloaded MIMIC-IV 2.1 ZIP at:
 
-## Quick Start
+```text
+data/mimic_iv_raw/mimic-iv-2-1.zip
+```
 
-### 1. Install dependencies
+## Current Status
+
+- MIMIC-IV 2.1 ZIP is present locally.
+- The existing `data/preprocessed` arrays are small (`350/75/75` split), so they
+  should be treated as a smoke-test dataset, not final full-dataset training.
+- Generated outputs such as model checkpoints, plots, result JSON/TXT files, and
+  the local virtual environment are disposable and ignored.
+- The active feature schema has `59` features per timestep.
+
+## Project Structure
+
+```text
+Temporal Analysis/
+|-- README.md
+|-- requirements.txt
+|-- evaluate_trained_models.py
+|-- docs/
+|   |-- project_architecture.md
+|   |-- dataset.md
+|   `-- models/
+|       |-- bilstm_attention.md
+|       |-- bigru.md
+|       `-- transformer_encoder.md
+|-- data/
+|   |-- mimic_iv_raw/          # MIMIC-IV ZIP, not committed
+|   `-- preprocessed/          # .npy arrays and scaler, not committed
+|-- notebooks/
+|   `-- mimiciv_colab_gpu_training.ipynb
+|-- src/
+|   |-- run_full_colab_training.py
+|   |-- run_full_local_pipeline.py
+|   |-- preprocessing/
+|   |   |-- download_mimiciv_dataset.py
+|   |   |-- inspect_mimiciv_items.py
+|   |   `-- build_cardiac_progression_dataset.py
+|   |-- model_training/
+|   |   |-- train_bilstm_attention.py     # BiLSTM + attention
+|   |   |-- train_bigru.py                # BiGRU baseline
+|   |   |-- train_transformer_encoder.py  # Transformer encoder
+|   |   `-- predict_bilstm_patient.py
+|   `-- reporting/
+|       |-- plot_dataset_overview.py
+|       `-- plot_model_results.py
+```
+
+## Local Setup
+
 ```bash
+python -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Synthetic data pipeline (no setup required)
+## Build Real Dataset
+
+Use this when you want to rebuild arrays from the full downloaded MIMIC-IV ZIP:
+
 ```bash
-python src/run_local_pipeline.py --num_patients 500 --num_timepoints 6
-python src/utils/visualize_data.py
-python src/models/train_lstm.py
-python src/models/train_gru.py
-python src/models/train_transformer.py
-python src/utils/visualize_results.py
+python src/preprocessing/build_cardiac_progression_dataset.py --zip data/mimic_iv_raw/mimic-iv-2-1.zip --chunk 100000 --seq_len 6
 ```
 
-### 3. Real clinical data pipeline — MIMIC-III Demo (open-access)
+Lower `--chunk` to `25000` or `50000` if RAM is limited. The script streams the
+large CSVs from the ZIP and saves:
+
+```text
+data/preprocessed/X_train.npy
+data/preprocessed/X_val.npy
+data/preprocessed/X_test.npy
+data/preprocessed/y_train.npy
+data/preprocessed/y_val.npy
+data/preprocessed/y_test.npy
+data/preprocessed/preprocessor.pkl
+data/preprocessed/feature_names.pkl
+```
+
+## Train Models Locally
+
 ```bash
-python src/run_real_pipeline.py
+python src/model_training/train_bilstm_attention.py --epochs 80 --batch_size 64 --patience 12
+python src/model_training/train_bigru.py --epochs 80 --batch_size 64 --patience 12
+python src/model_training/train_transformer_encoder.py --epochs 80 --batch_size 64 --patience 12
+python evaluate_trained_models.py
 ```
 
-### 4. MIMIC-IV 2.1 pipeline (full 67 GB dataset — best results)
+`train_bilstm_attention.py` is the BiLSTM model: it uses a 2-layer bidirectional
+LSTM with an attention pooling head.
 
-#### Prerequisites
-1. Create a free account at https://www.kaggle.com
-2. Go to **https://www.kaggle.com/settings** → API section → **"Create New Token"**
-3. Save the downloaded `kaggle.json` to `C:\Users\<you>\.kaggle\kaggle.json`
+## Train on Google Colab GPU
 
-#### Run
+Use the notebook:
+
+```text
+notebooks/mimiciv_colab_gpu_training.ipynb
+```
+
+Recommended Colab flow:
+
+1. Upload this project folder to Google Drive.
+2. Put `mimic-iv-2-1.zip` in `data/mimic_iv_raw/`.
+3. Open the notebook in Colab.
+4. Runtime -> Change runtime type -> GPU.
+5. Run the notebook top to bottom.
+
+The notebook installs dependencies, mounts Drive, verifies GPU availability,
+rebuilds the complete dataset from `mimic-iv-2-1.zip`, trains BiLSTM, GRU, and
+Transformer, then compares metrics with `evaluate_trained_models.py`.
+
+The notebook calls this strict full-run command:
+
 ```bash
-# Full pipeline (download → extract → train all models)
-python src/run_mimiciv_pipeline.py
-
-# Step-by-step (recommended for large dataset)
-python src/data/download_mimiciv.py          # Download ZIP (~7.4 GB) from Kaggle
-python src/data/explore_mimiciv.py           # Verify item IDs (< 30 sec)
-python src/data/build_mimiciv_dataset.py     # Extract cardiac features (~30–90 min)
-python src/utils/visualize_data.py
-python src/models/train_lstm.py
-python src/models/train_gru.py
-python src/models/train_transformer.py
-python src/utils/visualize_results.py
-
-# Resume after download (if build already done)
-python src/run_mimiciv_pipeline.py --skip_download --skip_build
+python src/run_full_colab_training.py --zip data/mimic_iv_raw/mimic-iv-2-1.zip --chunk 100000 --seq_len 6 --epochs 80 --batch_size 128 --hidden_size 128 --patience 12
 ```
 
-#### Disk space required
-| File | Size |
-|------|------|
-| MIMIC-IV ZIP (downloaded) | ~7.4 GB |
-| Extracted cardiac features CSV | ~100–500 MB |
-| Preprocessed .npy arrays | ~50–200 MB |
-| **Total** | **~8–9 GB** |
+By default this command removes old generated `data/preprocessed`, `models`,
+`visualizations`, and `results.json` outputs first, so final training does not
+accidentally reuse the small smoke-test arrays.
 
----
+## Model Inputs
 
-## Project Structure
-```
-Temporal Analysis/
-├── README.md                              # This file
-├── requirements.txt                       # Python dependencies
-├── data/
-│   ├── mimic_demo/                        # Downloaded MIMIC-III Demo CSV files
-│   ├── eicu_demo/                         # Downloaded eICU Demo CSV files
-│   ├── real/                              # Fused real clinical CSV
-│   ├── processed/                         # Synthetic longitudinal feature CSV
-│   └── preprocessed/                      # .npy arrays for model training
-├── models/                                # Saved model checkpoints (.pth)
-├── src/
-│   ├── __init__.py
-│   ├── run_local_pipeline.py              # Synthetic data generation + preprocessing
-│   ├── run_real_pipeline.py               # End-to-end real clinical pipeline orchestrator
-│   ├── data/
-│   │   ├── __init__.py
-│   │   ├── download_real_data.py          # Downloads MIMIC-III Demo + eICU Demo
-│   │   ├── build_real_dataset.py          # Extracts features (MIMIC-III + eICU)
-│   │   ├── download_mimiciv.py            # Downloads MIMIC-IV 2.1 ZIP from Kaggle
-│   │   ├── explore_mimiciv.py             # Item ID discovery (d_items + d_labitems)
-│   │   └── build_mimiciv_dataset.py       # Full MIMIC-IV extraction pipeline
-│   ├── models/
-│   │   ├── __init__.py
-│   │   ├── train_lstm.py                  # BiLSTM with attention — primary model
-│   │   ├── train_gru.py                   # GRU baseline model
-│   │   ├── train_transformer.py           # Positional-encoded Transformer
-│   │   └── predict.py                     # CLI inference on a single patient
-│   └── utils/
-│       ├── __init__.py
-│       ├── visualize_data.py              # EDA plots (class balance, distributions, trends)
-│       └── visualize_results.py           # Post-training plots (ROC, PR, threshold sweep)
-└── visualizations/
-    ├── eda/                               # EDA figures
-    ├── lstm/                              # LSTM training history + confusion matrix
-    └── results/                           # ROC curve, PR curve, threshold sweep
+Each sample has shape:
+
+```text
+(sequence_length, 59_features)
 ```
 
----
+Default sequence length is `6` ICU stays. Patients with fewer stays are padded
+from their earliest available stay.
 
-## File Descriptions
+Feature groups include:
 
-### Pipeline Runners
-| File | Purpose |
-|------|---------|
-| `src/run_local_pipeline.py` | Generates synthetic longitudinal EHR data (58 features × 6 visits × 500 patients) |
-| `src/run_real_pipeline.py` | MIMIC-III Demo + eICU Demo pipeline (open-access) |
-| `src/run_mimiciv_pipeline.py` | **MIMIC-IV 2.1 full pipeline** — download → explore → extract → train |
+- Vital signs: heart rate, blood pressure, respiratory rate, temperature, SpO2
+- Cardiac markers: troponin, BNP, NT-proBNP
+- Metabolic and renal labs: creatinine, BUN, glucose
+- Electrolytes: potassium, sodium, chloride, bicarbonate
+- CBC: hematocrit, hemoglobin, WBC, platelets
+- Clinical context: age, length of stay, prior cardiac conditions, ICU/admission flags
+- Temporal context: days since prior admission, time delta, visit index
 
-### Data Scripts
-| File | Purpose |
-|------|---------|
-| `src/data/download_real_data.py` | Downloads MIMIC-III Demo + eICU Demo from PhysioNet (no credentials) |
-| `src/data/build_real_dataset.py` | Extracts cardiac features from MIMIC-III + eICU, fuses to 30 features |
-| `src/data/download_mimiciv.py` | Downloads MIMIC-IV 2.1 ZIP from Kaggle (~7.4 GB) via Kaggle API |
-| `src/data/explore_mimiciv.py` | Reads `d_items` + `d_labitems` from within ZIP to confirm itemid mappings |
-| `src/data/build_mimiciv_dataset.py` | Streams `chartevents` + `labevents` in chunks from ZIP, builds 58-feature cardiac progression dataset |
+## Model Outputs
 
-### Model Training
-| File | Purpose |
-|------|---------|
-| `src/models/train_lstm.py` | Trains a Bidirectional LSTM with self-attention head — the **primary model** |
-| `src/models/train_gru.py` | Trains a Bidirectional GRU — lightweight baseline for comparison |
-| `src/models/train_transformer.py` | Trains a Transformer with positional encoding and CLS-token classification |
-| `src/models/predict.py` | CLI tool for single-patient inference using a trained LSTM checkpoint |
+Each model outputs a sigmoid probability of worsening progression. The default
+classification threshold is `0.5`; compare AUC-ROC, F1, recall, and precision
+before choosing the final model for reporting.
 
-### Visualization
-| File | Purpose |
-|------|---------|
-| `src/utils/visualize_data.py` | Generates EDA plots: class balance, feature distributions, temporal trends, missing values |
-| `src/utils/visualize_results.py` | Generates post-training plots: ROC curve, Precision-Recall curve, threshold sweep |
+## Expected Workflow for Final Results
 
----
-
-## Models
-
-| Model | Script | Architecture | Description |
-|-------|--------|--------------|-------------|
-| BiLSTM | `train_lstm.py` | 2-layer BiLSTM + Self-Attention + FC | Primary model with attention-weighted context |
-| GRU | `train_gru.py` | 2-layer BiGRU + FC | Lightweight baseline using last hidden state |
-| Transformer | `train_transformer.py` | Linear projection + Positional Encoding + 3-layer Encoder + CLS token | Modern attention-based architecture |
-
----
-
-## Prediction Target — Cardiac Progression
-
-For the MIMIC-IV pipeline, the model predicts whether a patient's cardiac
-condition will **worsen (label=1)** or **improve / stay stable (label=0)** by
-their next ICU admission.
-
-This is determined by a **Cardiac Severity Index (CSI)** computed per ICU stay
-from these components:
-
-| Component | Normal Range | Weight |
-|-----------|-------------|--------|
-| Heart rate deviation | 60–100 bpm | up to +3 pts |
-| Systolic BP (hypotension/hypertension) | 90–160 mmHg | up to +3 pts |
-| Troponin T (myocardial injury) | < 0.01 ng/mL | up to +3 pts |
-| BNP (heart failure severity) | < 100 pg/mL | up to +3 pts |
-| SpO2 (oxygenation) | > 95% | up to +3 pts |
-| Creatinine (cardiorenal) | < 1.5 mg/dL | up to +2 pts |
-| Respiratory rate | 12–20 br/min | up to +2 pts |
-| Hemoglobin (cardiac load) | > 12 g/dL | up to +2 pts |
-
-If CSI increases > 10% from visit t to visit t+1 → **label = 1 (worsening)**.
-For single-visit patients or last visit → hospital in-hospital mortality is used.
-
----
-
-## Expected Performance
-
-| Dataset | AUC-ROC | Notes |
-|---------|---------|-------|
-| Synthetic (500 pts) | 0.90–0.95 | Controlled noise, clean signal |
-| MIMIC-III Demo (~100 ICU) | 0.65–0.75 | Very small sample |
-| **MIMIC-IV Full (~300K visits)** | **0.75–0.85** | Best real-world performance |
-
----
-
-## Dependencies
-
-Listed in `requirements.txt`:
-- **numpy** — array operations
-- **pandas** — data manipulation
-- **scikit-learn** — preprocessing, splitting, metrics
-- **matplotlib + seaborn** — visualization
-- **torch** — deep learning models
-- **tqdm** — progress bars
-- **requests** — HTTP downloads
-- **joblib** — serialisation (scaler, feature names)
+```bash
+python src/preprocessing/build_cardiac_progression_dataset.py --zip data/mimic_iv_raw/mimic-iv-2-1.zip --chunk 100000 --seq_len 6
+python src/model_training/train_bilstm_attention.py --epochs 80 --batch_size 64 --patience 12
+python src/model_training/train_bigru.py --epochs 80 --batch_size 64 --patience 12
+python src/model_training/train_transformer_encoder.py --epochs 80 --batch_size 64 --patience 12
+python evaluate_trained_models.py
+python src/reporting/plot_model_results.py
+```

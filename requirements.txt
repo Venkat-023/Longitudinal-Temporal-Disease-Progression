@@ -1,10 +1,18 @@
+# Core numeric/data processing
 numpy>=1.24.0
 pandas>=2.0.0
 scikit-learn>=1.3.0
+joblib>=1.3.0
+tqdm>=4.65.0
+
+# Deep learning
+# In Colab, install PyTorch from the default Colab runtime when available.
+torch>=2.0.0
+
+# Visualization/reporting
 matplotlib>=3.7.0
 seaborn>=0.12.0
-torch>=2.0.0
-tqdm>=4.65.0
+
+# Dataset download helpers
 requests>=2.31.0
-joblib>=1.3.0
 kaggle>=1.6.0

@@ -1,11 +1,11 @@
 """
-train_transformer.py
-====================
+train_transformer_encoder.py
+============================
 Positional-encoding Transformer classifier for heart disease prediction.
 
 Usage
 -----
-python src/models/train_transformer.py [--epochs 50] [--lr 0.0001]
+python src/model_training/train_transformer_encoder.py [--epochs 50] [--lr 0.0001]
 """
 
 import argparse
@@ -117,6 +117,7 @@ def main():
     parser.add_argument("--d_model",    type=int,   default=128)
     parser.add_argument("--nhead",      type=int,   default=8)
     parser.add_argument("--num_layers", type=int,   default=3)
+    parser.add_argument("--dropout",    type=float, default=0.1)
     parser.add_argument("--patience",   type=int,   default=10)
     args = parser.parse_args()
 
@@ -133,7 +134,7 @@ def main():
 
     input_size = data["X_train"].shape[2]
     model = TransformerHeartDiseaseModel(
-        input_size, args.d_model, args.nhead, args.num_layers
+        input_size, args.d_model, args.nhead, args.num_layers, args.dropout
     ).to(device)
     print(f"\n🧠 Transformer: {sum(p.numel() for p in model.parameters()):,} parameters")
     print(f"   d_model={args.d_model}, nhead={args.nhead}, layers={args.num_layers}")
@@ -190,8 +191,14 @@ def main():
     except Exception:
         pass
 
-    torch.save({"model_state_dict": model.state_dict(), "input_size": input_size},
-               MODEL_DIR / "transformer_final.pth")
+    torch.save({
+        "model_state_dict": model.state_dict(),
+        "input_size": input_size,
+        "d_model": args.d_model,
+        "nhead": args.nhead,
+        "num_layers": args.num_layers,
+        "dropout": args.dropout,
+    }, MODEL_DIR / "transformer_final.pth")
     print(f"\n💾 Model saved to: {MODEL_DIR / 'transformer_final.pth'}")
     print("\n✅ Transformer training complete!")
 

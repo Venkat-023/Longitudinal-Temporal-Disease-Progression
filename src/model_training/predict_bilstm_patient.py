@@ -1,12 +1,12 @@
 """
-predict.py
+predict_bilstm_patient.py
 ==========
 CLI inference script: load a trained LSTM and predict on a patient.
 
 Usage
 -----
-python src/models/predict.py --patient_id 0
-python src/models/predict.py --patient_id 42 --model_path models/lstm_final.pth
+python src/model_training/predict_bilstm_patient.py --patient_id 0
+python src/model_training/predict_bilstm_patient.py --patient_id 42 --model_path models/lstm_final.pth
 """
 
 import argparse
@@ -24,7 +24,7 @@ MODEL_DIR = ROOT / "models"
 def load_model(model_path: Path, input_size: int, device: torch.device):
     """Load the saved LSTM model checkpoint."""
     sys.path.insert(0, str(ROOT / "src" / "models"))
-    from train_lstm import LSTMHeartDiseaseModel
+    from train_bilstm_attention import LSTMHeartDiseaseModel
 
     ckpt = torch.load(model_path, map_location=device)
 
@@ -82,7 +82,7 @@ def main():
     model_path = Path(args.model_path)
     if not model_path.exists():
         print(f"❌ Model not found: {model_path}")
-        print("   Run: python src/models/train_lstm.py first.")
+        print("   Run: python src/model_training/train_bilstm_attention.py first.")
         sys.exit(1)
 
     # ── Setup ─────────────────────────────────────────────────────

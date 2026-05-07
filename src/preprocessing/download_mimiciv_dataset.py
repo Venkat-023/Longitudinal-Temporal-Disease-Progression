@@ -1,5 +1,5 @@
 """
-download_mimiciv_robust.py
+download_mimiciv_dataset.py
 ==========================
 Crash-proof, resumable MIMIC-IV 2.1 downloader.
 
@@ -13,7 +13,7 @@ Features
 
 Usage
 -----
-  python src/data/download_mimiciv_robust.py
+  python src/preprocessing/download_mimiciv_dataset.py
 
 Python >= 3.8 + requests (`pip install requests`)
 Kaggle creds at  ~/.kaggle/kaggle.json  (username + key)
@@ -236,7 +236,7 @@ def main():
 
     log("=" * 60)
     log("SUCCESS! Next step:")
-    log("  python src/data/build_mimiciv_dataset.py")
+    log("  python src/preprocessing/build_cardiac_progression_dataset.py")
     log("=" * 60)
 
 

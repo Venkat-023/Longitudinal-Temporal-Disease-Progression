@@ -1,41 +1,74 @@
-# Environments
+# Python environments
 .env
-.venv
+.venv/
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
 
-# Byte-compiled / optimized / DLL files
+# Python caches/build artifacts
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
 
-# PyTorch
-*.pth
-*.pt
-*.ckpt
+# Jupyter / Colab
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# VS Code
+# IDE / OS files
 .vscode/
+.idea/
+.DS_Store
+Thumbs.db
 
-# Data
+# Secrets and local credentials
+*.env
+kaggle.json
+.kaggle/
+
+# Raw and generated data
+data/mimic_iv_raw/
 data/mimic_demo/
 data/eicu_demo/
 data/real/
 data/processed/
 data/preprocessed/
-data/mimic_iv_raw/
 *.csv
+*.tsv
 *.npy
+*.npz
+*.pkl
+*.joblib
 
-# Visualizations
+# Model checkpoints and training outputs
+models/
+*.pth
+*.pt
+*.ckpt
+*.onnx
+
+# Generated plots/reports
 visualizations/
+results.json
+progress.txt
+results_output.txt
+*.log
 
-# OS generated files
-.DS_Store
-Thumbs.db
+# Local archives and exports
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+
+# Temporary files
+tmp/
+temp/
+*.tmp
