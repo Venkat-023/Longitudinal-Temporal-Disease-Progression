@@ -56,7 +56,6 @@ models/
 
 # Generated plots/reports
 visualizations/
-results.json
 progress.txt
 results_output.txt
 *.log

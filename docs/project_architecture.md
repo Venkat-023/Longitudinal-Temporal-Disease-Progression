@@ -33,6 +33,7 @@ Temporal Analysis/
 docs/
 |-- project_architecture.md
 |-- dataset.md
+|-- model_results.md
 |-- colab_vscode.md
 `-- models/
     |-- bilstm_attention.md
@@ -43,6 +44,7 @@ docs/
 | File | Purpose |
 |---|---|
 | `docs/dataset.md` | Raw dataset, extraction, preprocessing, labels, final features |
+| `docs/model_results.md` | Latest Colab metrics, confusion matrix, and result interpretation |
 | `docs/models/bilstm_attention.md` | BiLSTM attention architecture and training details |
 | `docs/models/bigru.md` | BiGRU architecture and training details |
 | `docs/models/transformer_encoder.md` | Transformer encoder architecture and training details |
@@ -127,6 +129,7 @@ src/preprocessing/
 |-- build_cardiac_progression_dataset.py
 |-- download_mimiciv_dataset.py
 |-- inspect_mimiciv_items.py
+|-- sanitize_preprocessed_arrays.py
 `-- __init__.py
 ```
 
@@ -135,6 +138,7 @@ src/preprocessing/
 | `build_cardiac_progression_dataset.py` | Main dataset builder from MIMIC-IV ZIP to `.npy` arrays |
 | `download_mimiciv_dataset.py` | Kaggle download helper |
 | `inspect_mimiciv_items.py` | Inspect MIMIC item IDs for vitals/labs |
+| `sanitize_preprocessed_arrays.py` | Repairs existing `X_*.npy` arrays if they contain NaN/Inf values |
 
 Inside `build_cardiac_progression_dataset.py`, common fixes are:
 
@@ -154,6 +158,7 @@ src/model_training/
 |-- train_bigru.py
 |-- train_transformer_encoder.py
 |-- predict_bilstm_patient.py
+|-- data_checks.py
 `-- __init__.py
 ```
 
@@ -163,6 +168,7 @@ src/model_training/
 | `train_bigru.py` | Trains 2-layer BiGRU baseline |
 | `train_transformer_encoder.py` | Trains Transformer encoder classifier |
 | `predict_bilstm_patient.py` | Runs prediction with trained BiLSTM checkpoint |
+| `data_checks.py` | Validates saved arrays before training so NaN/Inf values fail early |
 
 Generated checkpoints:
 
@@ -197,6 +203,7 @@ src/reporting/
 | Long `chartevents` step | normal; in `extract_vitals` |
 | Lab extraction error | `extract_labs` in preprocessing file |
 | Missing `X_train.npy` | preprocessing did not complete |
+| `Train Loss: nan` | check `data/preprocessed/X_*.npy`; rebuild or sanitize arrays |
 | BiLSTM error | `src/model_training/train_bilstm_attention.py` |
 | BiGRU error | `src/model_training/train_bigru.py` |
 | Transformer error | `src/model_training/train_transformer_encoder.py` |

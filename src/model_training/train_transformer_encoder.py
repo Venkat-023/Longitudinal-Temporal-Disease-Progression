@@ -20,6 +20,8 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.metrics import (accuracy_score, precision_score, recall_score,
                              f1_score, roc_auc_score)
 
+from data_checks import validate_arrays
+
 ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR  = ROOT / "data" / "preprocessed"
 MODEL_DIR = ROOT / "models"
@@ -76,9 +78,12 @@ def load_data(data_dir: Path):
     for name in ["X_train","X_val","X_test","y_train","y_val","y_test"]:
         p = data_dir / f"{name}.npy"
         if not p.exists():
-            print(f"❌ Missing: {p}. Run: python src/run_local_pipeline.py")
+            print(f"❌ Missing: {p}.")
+            print("   Run: python src/run_full_local_pipeline.py")
+            print("   OR:  python src/preprocessing/build_cardiac_progression_dataset.py")
             sys.exit(1)
         arrays[name] = np.load(p)
+    validate_arrays(arrays)
     return arrays
 
 
@@ -157,6 +162,11 @@ def main():
     for epoch in range(1, args.epochs + 1):
         tr_loss, tr_acc = run_epoch(model, train_loader, optimizer, criterion, device, True)
         vl_loss, vl_acc = run_epoch(model, val_loader,   optimizer, criterion, device, False)
+        if not np.isfinite(tr_loss) or not np.isfinite(vl_loss):
+            print("\nInvalid training loss detected.")
+            print("This usually means the preprocessed X arrays contain NaN/Inf values.")
+            print("Run the dataset validation/sanitizing cell in Colab, then restart training.")
+            sys.exit(1)
         print(f"Epoch {epoch:>3}/{args.epochs}  "
               f"Train Loss: {tr_loss:.4f} Acc: {tr_acc:.4f}  "
               f"Val Loss: {vl_loss:.4f} Acc: {vl_acc:.4f}")
@@ -170,7 +180,11 @@ def main():
                 print(f"\nEarly stopping at epoch {epoch}")
                 break
 
-    model.load_state_dict(torch.load(MODEL_DIR / "transformer_best.pth", map_location=device))
+    best_path = MODEL_DIR / "transformer_best.pth"
+    if not best_path.exists():
+        print("\nNo best checkpoint was saved. Training never produced an improved finite validation loss.")
+        sys.exit(1)
+    model.load_state_dict(torch.load(best_path, map_location=device))
     model.eval()
     all_probs, all_labels = [], []
     with torch.no_grad():

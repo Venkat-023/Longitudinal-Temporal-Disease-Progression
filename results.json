@@ -1,0 +1,69 @@
+{
+  "dataset": {
+    "source": "MIMIC-IV 2.1 cardiac progression cohort",
+    "sequence_length": 6,
+    "feature_count": 59,
+    "splits": {
+      "train": {
+        "samples": 24678,
+        "positives": 4178,
+        "positive_rate": 0.16930059162006644
+      },
+      "val": {
+        "samples": 5289,
+        "positives": 896,
+        "positive_rate": 0.16940820570996407
+      },
+      "test": {
+        "samples": 5289,
+        "positives": 896,
+        "positive_rate": 0.16940820570996407
+      }
+    },
+    "array_sanitization": {
+      "train_nan_replaced": 296136,
+      "val_nan_replaced": 63468,
+      "test_nan_replaced": 63468,
+      "inf_replaced": 0,
+      "method": "Existing X arrays were repaired with finite zero replacement before model training."
+    }
+  },
+  "models": {
+    "bilstm_attention": {
+      "status": "completed",
+      "environment": "Google Colab GPU, Tesla T4",
+      "training": {
+        "epochs_requested": 80,
+        "epochs_completed": 17,
+        "best_epoch": 5,
+        "best_validation_loss": 0.6628,
+        "learning_rate": 0.0003,
+        "batch_size": 128,
+        "hidden_size": 128,
+        "patience": 12
+      },
+      "test_metrics": {
+        "accuracy": 0.8134,
+        "precision": 0.4712,
+        "recall": 0.8304,
+        "f1_score": 0.6012,
+        "auc_roc": 0.9021
+      },
+      "confusion_matrix": [
+        [3558, 835],
+        [152, 744]
+      ],
+      "checkpoint": "models/lstm_final.pth",
+      "plots": [
+        "visualizations/lstm/training_history.png",
+        "visualizations/lstm/confusion_matrix.png"
+      ]
+    },
+    "bigru": {
+      "status": "pending"
+    },
+    "transformer_encoder": {
+      "status": "pending"
+    }
+  }
+}

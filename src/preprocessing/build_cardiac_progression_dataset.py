@@ -732,7 +732,13 @@ def build_and_save(df: pd.DataFrame, seq_len: int = 6):
             .transform(lambda x: x.ffill().bfill())
         )
     medians = df[FEATURE_NAMES].median()
-    df[FEATURE_NAMES] = df[FEATURE_NAMES].fillna(medians)
+    medians = medians.fillna(0.0)
+    df[FEATURE_NAMES] = (
+        df[FEATURE_NAMES]
+        .replace([np.inf, -np.inf], np.nan)
+        .fillna(medians)
+        .fillna(0.0)
+    )
 
     # ── Save fused CSV ────────────────────────────────────────────────────────
     REAL_DIR.mkdir(parents=True, exist_ok=True)
@@ -765,6 +771,7 @@ def build_and_save(df: pd.DataFrame, seq_len: int = 6):
 
     X = np.array(X_list, dtype=np.float32)
     y = np.array(y_list, dtype=np.int64)
+    X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
     print(f"\n   Sequences: {len(y):,}  shape: {X.shape}")
 
     if len(y) < 50:
@@ -789,6 +796,14 @@ def build_and_save(df: pd.DataFrame, seq_len: int = 6):
     X_train     = scaler.fit_transform(X_train.reshape(-1, F)).reshape(n_tr, T, F)
     X_val       = scaler.transform(X_val.reshape(-1,   F)).reshape(X_val.shape)
     X_test      = scaler.transform(X_test.reshape(-1,  F)).reshape(X_test.shape)
+    X_train     = np.nan_to_num(X_train, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
+    X_val       = np.nan_to_num(X_val,   nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
+    X_test      = np.nan_to_num(X_test,  nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
+
+    for split_name, X_split in [("train", X_train), ("val", X_val), ("test", X_test)]:
+        if not np.isfinite(X_split).all():
+            print(f"❌  Non-finite values remain in {split_name} split after scaling.")
+            sys.exit(1)
 
     # ── Save ──────────────────────────────────────────────────────────────────
     PREP_DIR.mkdir(parents=True, exist_ok=True)

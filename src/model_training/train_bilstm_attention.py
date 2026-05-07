@@ -24,6 +24,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from data_checks import validate_arrays
+
 ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR  = ROOT / "data" / "preprocessed"
 MODEL_DIR = ROOT / "models"
@@ -90,7 +92,7 @@ def load_data(data_dir: Path) -> dict:
         print("   OR:  python src/preprocessing/build_cardiac_progression_dataset.py")
         sys.exit(1)
 
-    return {
+    arrays = {
         "X_train": np.load(data_dir / "X_train.npy"),
         "X_val":   np.load(data_dir / "X_val.npy"),
         "X_test":  np.load(data_dir / "X_test.npy"),
@@ -98,6 +100,8 @@ def load_data(data_dir: Path) -> dict:
         "y_val":   np.load(data_dir / "y_val.npy"),
         "y_test":  np.load(data_dir / "y_test.npy"),
     }
+    validate_arrays(arrays)
+    return arrays
 
 
 def make_loader(X: np.ndarray, y: np.ndarray, batch_size: int,
@@ -297,6 +301,11 @@ def main():
     for epoch in range(1, args.epochs + 1):
         tr_loss, tr_acc = train_epoch(model, train_loader, optimizer, criterion, device)
         vl_loss, vl_acc = eval_epoch(model, val_loader, criterion, device)
+        if not np.isfinite(tr_loss) or not np.isfinite(vl_loss):
+            print("\nInvalid training loss detected.")
+            print("This usually means the preprocessed X arrays contain NaN/Inf values.")
+            print("Run the dataset validation/sanitizing cell in Colab, then restart training.")
+            sys.exit(1)
         scheduler.step(vl_loss)
 
         history["train_loss"].append(tr_loss)
@@ -329,7 +338,11 @@ def main():
     print(f"{'=' * 70}")
 
     # Load best checkpoint
-    model.load_state_dict(torch.load(MODEL_DIR / "best_model.pth", map_location=device))
+    best_path = MODEL_DIR / "best_model.pth"
+    if not best_path.exists():
+        print("\nNo best checkpoint was saved. Training never produced an improved finite validation loss.")
+        sys.exit(1)
+    model.load_state_dict(torch.load(best_path, map_location=device))
     probs, labels = predict(model, test_loader, device)
     preds = (probs >= 0.5).astype(int)
 

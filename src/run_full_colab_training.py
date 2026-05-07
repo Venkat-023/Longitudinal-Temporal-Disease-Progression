@@ -51,6 +51,7 @@ def main() -> None:
     parser.add_argument("--chunk", type=int, default=100_000)
     parser.add_argument("--seq_len", type=int, default=6)
     parser.add_argument("--epochs", type=int, default=80)
+    parser.add_argument("--lr", type=float, default=3e-4)
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--hidden_size", type=int, default=128)
     parser.add_argument("--patience", type=int, default=12)
@@ -100,6 +101,8 @@ def main() -> None:
             str(args.batch_size),
             "--hidden_size",
             str(args.hidden_size),
+            "--lr",
+            str(args.lr),
             "--patience",
             str(args.patience),
         ],
@@ -111,6 +114,8 @@ def main() -> None:
             str(args.batch_size),
             "--hidden_size",
             str(args.hidden_size),
+            "--lr",
+            str(args.lr),
             "--patience",
             str(args.patience),
         ],
@@ -126,6 +131,8 @@ def main() -> None:
             "8",
             "--num_layers",
             "3",
+            "--lr",
+            str(args.lr),
             "--patience",
             str(args.patience),
         ],

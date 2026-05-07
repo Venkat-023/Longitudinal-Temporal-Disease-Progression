@@ -32,6 +32,7 @@ Temporal Analysis/
 |-- docs/
 |   |-- project_architecture.md
 |   |-- dataset.md
+|   |-- model_results.md
 |   `-- models/
 |       |-- bilstm_attention.md
 |       |-- bigru.md
@@ -91,9 +92,9 @@ data/preprocessed/feature_names.pkl
 ## Train Models Locally
 
 ```bash
-python src/model_training/train_bilstm_attention.py --epochs 80 --batch_size 64 --patience 12
-python src/model_training/train_bigru.py --epochs 80 --batch_size 64 --patience 12
-python src/model_training/train_transformer_encoder.py --epochs 80 --batch_size 64 --patience 12
+python src/model_training/train_bilstm_attention.py --epochs 80 --lr 0.0003 --batch_size 64 --patience 12
+python src/model_training/train_bigru.py --epochs 80 --lr 0.0003 --batch_size 64 --patience 12
+python src/model_training/train_transformer_encoder.py --epochs 80 --lr 0.0003 --batch_size 64 --patience 12
 python evaluate_trained_models.py
 ```
 
@@ -123,7 +124,7 @@ Transformer, then compares metrics with `evaluate_trained_models.py`.
 The notebook calls this strict full-run command:
 
 ```bash
-python src/run_full_colab_training.py --zip data/mimic_iv_raw/mimic-iv-2-1.zip --chunk 100000 --seq_len 6 --epochs 80 --batch_size 128 --hidden_size 128 --patience 12
+python src/run_full_colab_training.py --zip data/mimic_iv_raw/mimic-iv-2-1.zip --chunk 100000 --seq_len 6 --epochs 80 --lr 0.0003 --batch_size 128 --hidden_size 128 --patience 12
 ```
 
 By default this command removes old generated `data/preprocessed`, `models`,
@@ -157,13 +158,40 @@ Each model outputs a sigmoid probability of worsening progression. The default
 classification threshold is `0.5`; compare AUC-ROC, F1, recall, and precision
 before choosing the final model for reporting.
 
+## Latest Recorded Result
+
+The latest full Colab run for the BiLSTM attention model is recorded in:
+
+```text
+docs/model_results.md
+results.json
+```
+
+Summary:
+
+```text
+Accuracy  : 0.8134
+Precision : 0.4712
+Recall    : 0.8304
+F1 Score  : 0.6012
+AUC-ROC   : 0.9021
+```
+
 ## Expected Workflow for Final Results
 
 ```bash
 python src/preprocessing/build_cardiac_progression_dataset.py --zip data/mimic_iv_raw/mimic-iv-2-1.zip --chunk 100000 --seq_len 6
-python src/model_training/train_bilstm_attention.py --epochs 80 --batch_size 64 --patience 12
-python src/model_training/train_bigru.py --epochs 80 --batch_size 64 --patience 12
-python src/model_training/train_transformer_encoder.py --epochs 80 --batch_size 64 --patience 12
+python src/model_training/train_bilstm_attention.py --epochs 80 --lr 0.0003 --batch_size 64 --patience 12
+python src/model_training/train_bigru.py --epochs 80 --lr 0.0003 --batch_size 64 --patience 12
+python src/model_training/train_transformer_encoder.py --epochs 80 --lr 0.0003 --batch_size 64 --patience 12
 python evaluate_trained_models.py
 python src/reporting/plot_model_results.py
 ```
+
+## Troubleshooting
+
+If training prints `Train Loss: nan` from the first epoch, stop the run. That
+usually means the saved `X_*.npy` arrays contain `NaN` or infinite values, and
+the apparent 83 percent accuracy is just the majority stable/improving class.
+The preprocessing script now sanitizes arrays before saving, and every trainer
+validates the arrays before training.
