@@ -190,6 +190,29 @@ encouraged to detect the minority worsening class, so they identify many true
 worsening cases but also produce more false positives. This improves recall and
 AUC-ROC, but it reduces precision at the default `0.5` threshold.
 
+### LSTM Diagnostic Curves
+
+The following plots are from the trained LSTM/BiLSTM attention model. They show
+that the model learns useful separation between worsening and stable/improving
+cases.
+
+![LSTM ROC curve](docs/assets/results/lstm_roc_curve.png)
+
+The ROC curve has AUC `0.9021`, which is strong discrimination for the held-out
+MIMIC-IV test set.
+
+![LSTM precision-recall curve](docs/assets/results/lstm_pr_curve.png)
+
+The precision-recall curve has average precision `0.7014`. This is much higher
+than the positive-class base rate of about `0.169`, so the model is performing
+well on the minority worsening class.
+
+![LSTM threshold sweep](docs/assets/results/lstm_threshold_sweep.png)
+
+The threshold sweep shows why threshold tuning matters. The default `0.5`
+threshold favors recall, while a threshold around `0.70` gives a better
+precision-recall balance and the best F1 score for this model.
+
 ## Next Improvements
 
 Planned work to improve results:
